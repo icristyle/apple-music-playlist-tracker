@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            width: 340px;
+            background: #1e1e1e;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        h2 { margin: 0; font-size: 16px; font-weight: 500; color: #fff; display: flex; justify-content: space-between; align-items: center;}
+        
+        /* Блок диагностики */
+        .diagnostic-card {
+            background: #2c2c2c;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 12px;
+            border: 1px solid #333;
+        }
+        .diag-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .diag-row:last-child { margin-bottom: 0; }
+        .val-new { color: #fa2d48; font-weight: bold; }
+        .val-saved { color: #4caf50; font-weight: bold; }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-primary { background: #fa2d48; color: white; }
+        .btn-primary:hover { background: #d41d36; }
+        .btn-secondary { background: #333; color: #ccc; }
+        .btn-secondary:hover { background: #444; color: #fff; }
+
+        .footer-link {
+            text-align: center;
+            font-size: 11px;
+            color: #666;
+            margin-top: 5px;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h2>AM Tracker V2.1 <span style="font-size:10px; color:#888" id="dbCount">DB: 0</span></h2>
+
+    <div class="diagnostic-card">
+        <div class="diag-row">
+            <span>🔍 Найдено на странице:</span>
+            <span id="pageTotal">...</span>
+        </div>
+        <div class="diag-row">
+            <span>✅ Уже в базе:</span>
+            <span id="pageSaved" class="val-saved">...</span>
+        </div>
+        <div class="diag-row">
+            <span>🆕 Новые треки:</span>
+            <span id="pageNew" class="val-new">...</span>
+        </div>
+    </div>
+
+    <button id="scanBtn" class="btn btn-primary">
+        <span>➕</span> Добавить Новые (<span id="btnCount">0</span>)
+    </button>
+
+    <button id="openLibraryBtn" class="btn btn-secondary">
+        <span>📂</span> Открыть архив
+    </button>
+    
+    <div id="status" style="text-align:center; font-size:12px; height:15px; color:#aaa;"></div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,135 @@
+const SELECTORS = {
+    row: '.songs-list-row',
+    title: '[data-testid="track-title"]',
+    artist: '[data-testid="track-column-secondary"], [data-testid="track-title-by-line"]',
+    duration: '[data-testid="track-duration"]'
+};
+
+let masterLibrary = new Set();
+let observer = null;
+
+// Помощник для идеальной очистки текста
+const cleanStr = (s) => s ? s.replace(/\s+/g, ' ').trim() : "";
+
+initialize();
+
+function initialize() {
+    chrome.storage.local.get(['master_library'], (result) => {
+        const data = result.master_library || [];
+        // При загрузке тоже чистим каждый элемент
+        masterLibrary = new Set(data.map(item => item.split('|').map(cleanStr).join('|')));
+        console.log("Библиотека загружена, треков:", masterLibrary.size);
+        
+        scanAndHighlight();
+        startObserver();
+    });
+
+    chrome.storage.onChanged.addListener((changes, area) => {
+        if (area === 'local' && changes.master_library) {
+            const data = changes.master_library.newValue || [];
+            masterLibrary = new Set(data.map(item => item.split('|').map(cleanStr).join('|')));
+            forceRescan();
+        }
+    });
+
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request.action === "GET_PAGE_STATS") sendResponse(getPageStatistics());
+        if (request.action === "SCRAPE_TRACKS") sendResponse({ tracks: scrapeTracksFromDOM() });
+    });
+}
+
+function forceRescan() {
+    document.querySelectorAll(SELECTORS.row).forEach(row => {
+        delete row.dataset.amtProcessed;
+        const oldBadge = row.querySelector('.amt-badge');
+        if (oldBadge) oldBadge.remove();
+        row.classList.remove('amt-saved-track', 'amt-new-track');
+    });
+    scanAndHighlight();
+}
+
+function startObserver() {
+    if (observer) observer.disconnect();
+    observer = new MutationObserver(() => scanAndHighlight());
+    observer.observe(document.body, { childList: true, subtree: true });
+}
+
+function parseRow(row) {
+    try {
+        const titleEl = row.querySelector(SELECTORS.title);
+        const artistEl = row.querySelector(SELECTORS.artist);
+        const durationEl = row.querySelector(SELECTORS.duration);
+
+        if (!titleEl) return null;
+
+        // Применяем cleanStr ко всем компонентам
+        const title = cleanStr(titleEl.innerText);
+        const artist = cleanStr(artistEl ? artistEl.innerText : "Unknown Artist");
+        const duration = cleanStr(durationEl ? durationEl.innerText : "0:00");
+        
+        const key = `${title}|${artist}|${duration}`;
+
+        return { key, titleElement: titleEl };
+    } catch (e) { return null; }
+}
+
+function scanAndHighlight() {
+    const rows = document.querySelectorAll(SELECTORS.row);
+    rows.forEach(row => {
+        if (row.dataset.amtProcessed) return;
+        const info = parseRow(row);
+        if (!info) return;
+
+        row.dataset.amtProcessed = "true";
+
+        // Проверка на наличие в Set
+        if (masterLibrary.has(info.key)) {
+            markAsSaved(row, info.titleElement);
+        } else {
+            markAsNew(row, info.titleElement);
+        }
+    });
+}
+
+function markAsSaved(row, titleEl) {
+    row.classList.remove('amt-new-track');
+    row.classList.add('amt-saved-track');
+    if (!titleEl.querySelector('.amt-badge-saved')) {
+        const b = titleEl.querySelector('.amt-badge'); if (b) b.remove();
+        const badge = document.createElement('span');
+        badge.className = 'amt-badge amt-badge-saved';
+        badge.innerText = 'IN LIB';
+        titleEl.appendChild(badge);
+    }
+}
+
+function markAsNew(row, titleEl) {
+    row.classList.remove('amt-saved-track');
+    row.classList.add('amt-new-track');
+    if (!titleEl.querySelector('.amt-badge-new')) {
+        const b = titleEl.querySelector('.amt-badge'); if (b) b.remove();
+        const badge = document.createElement('span');
+        badge.className = 'amt-badge amt-badge-new';
+        badge.innerText = 'NEW';
+        titleEl.appendChild(badge);
+    }
+}
+
+function scrapeTracksFromDOM() {
+    return Array.from(document.querySelectorAll(SELECTORS.row))
+        .map(row => parseRow(row))
+        .filter(i => i !== null)
+        .map(i => i.key);
+}
+
+function getPageStatistics() {
+    const rows = Array.from(document.querySelectorAll(SELECTORS.row));
+    let s = 0, n = 0;
+    rows.forEach(r => {
+        const i = parseRow(r);
+        if (i) {
+            if (masterLibrary.has(i.key)) s++; else n++;
+        }
+    });
+    return { totalVisible: rows.length, saved: s, new: n };
+}

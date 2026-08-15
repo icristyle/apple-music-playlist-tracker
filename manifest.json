@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "AM Tracker: Global History",
+  "version": "2.1",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://music.apple.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"]
+    }
+  ]
+}
